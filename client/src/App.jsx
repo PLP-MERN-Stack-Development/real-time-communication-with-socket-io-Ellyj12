@@ -1,35 +1,52 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { useSocket } from './socket/socket';
+import AuthPage from './components/authPage'; // IMPORT AuthPage
+import ChatInterface from './components/ChatInterface';
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Get connection status and functions from our hook
+  // We add 'disconnect' here for our logout button
+  const { isConnected, connect, disconnect } = useSocket();
+
+  // We still store username, but it can be set by AuthPage or localStorage
+  const [username, setUsername] = useState('');
+
+  // --- NEW: Auto-login on page load ---
+  useEffect(() => {
+    // Check if a token and username exist in storage
+    const token = localStorage.getItem('chat-token');
+    const storedUsername = localStorage.getItem('chat-username');
+
+    if (token && storedUsername) {
+      // If they exist, set the username in our state...
+      setUsername(storedUsername);
+      // ...and try to connect. The hook will handle sending the token.
+      connect();
+    }
+    // We only want this to run once on initial mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // NEW: Create a wrapper for the disconnect function to pass to the UI
+  const handleLogout = () => {
+    disconnect();
+    // We also clear the username state, which guarantees
+    // the AuthPage will be shown next.
+    setUsername('');
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="w-full h-screen bg-gray-900 text-white">
+      {!isConnected ? (
+        // --- UPDATED: Render AuthPage instead of JoinChat ---
+        <AuthPage setAppUsername={setUsername} connect={connect} />
+      ) : (
+        // --- UPDATED: Pass the handleLogout function down ---
+        <ChatInterface username={username} onLogout={handleLogout} />
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;
+
