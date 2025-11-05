@@ -39,7 +39,7 @@ This repository is structured as a two-app workspace:
   - `GET /api/users` — fetch all users with online status
 
 S
-## Architecture & data flow (high level)
+## Data flow 
 
 - Client connects to server via Socket.io and authenticates using a JWT passed in socket auth.
 - Server validates JWT in socket middleware and attaches the user to `socket.user`.
