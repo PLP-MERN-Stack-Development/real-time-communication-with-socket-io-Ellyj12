@@ -5,11 +5,10 @@ import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
 import TypingIndicator from '../components/TypingIndicator';
 
-// This is the main layout of the chat application.
-// It brings together all the other components.
+
 
 function ChatInterface({ username }) {
-  // We call the hook again here to get all the data and functions
+
   const {
     socket,
     messages,
@@ -26,9 +25,6 @@ function ChatInterface({ username }) {
     currentChannel,
   } = useSocket();
 
-  // This state tracks who the user is privately messaging.
-  // `null` means public chat.
-  // An object (e.g., { id: '...', username: '...' }) means private.
   const [pmRecipient, setPmRecipient] = useState(null);
 
   const handleSetPmRecipient = (user) => {
@@ -38,10 +34,7 @@ function ChatInterface({ username }) {
     }
   };
 
-  // We'll use a 3-column layout.
-  // Sidebar | Main Chat | (empty space)
-  // We use h-screen and overflow-hidden to make it fill the page
-  // without scrolling the whole page.
+
   return (
     <div className="w-full h-screen flex flex-col">
       {/* Header */}
@@ -55,7 +48,6 @@ function ChatInterface({ username }) {
         </button>
       </header>
 
-      {/* Main Content Area */}
       <div className="flex-grow flex overflow-hidden">
         {/* User List Sidebar */}
           <aside className="w-1/4 bg-gray-800 p-4 overflow-y-auto">
@@ -68,7 +60,6 @@ function ChatInterface({ username }) {
           />
         </aside>
 
-        {/* Chat Area */}
         <main className="flex-grow flex flex-col bg-gray-900">
           {/* Channel selector */}
           <div className="bg-gray-800 p-2 flex gap-2 items-center">
@@ -84,7 +75,7 @@ function ChatInterface({ username }) {
               </button>
             ))}
           </div>
-          {/* Private Message Indicator */}
+        
           {pmRecipient && (
             <div className="bg-purple-800 text-white p-2 text-center text-sm shadow-inner">
               Whispering to <strong>{pmRecipient.username}</strong>
@@ -97,9 +88,9 @@ function ChatInterface({ username }) {
             </div>
           )}
 
-          {/* Message List */}
+        
           <div className="flex-grow p-4 overflow-y-auto">
-            {/* If in a private conversation, show that conversation's messages */}
+          
             {pmRecipient ? (
               <MessageList
                 messages={privateMessages[pmRecipient.dbId]?.messages || []}
@@ -111,12 +102,12 @@ function ChatInterface({ username }) {
             )}
           </div>
 
-          {/* Typing Indicator */}
+        
           <div className="h-6 px-4">
             <TypingIndicator typingUsers={typingUsers} />
           </div>
 
-          {/* Message Input */}
+     
           <div className="p-4 bg-gray-800">
             <MessageInput
               setTyping={setTyping}

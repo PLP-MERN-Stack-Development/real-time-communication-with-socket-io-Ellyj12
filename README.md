@@ -1,77 +1,156 @@
-# Real-Time Chat Application with Socket.io
 
-This assignment focuses on building a real-time chat application using Socket.io, implementing bidirectional communication between clients and server.
+# Real-Time Chat Application (Socket.io + React + MongoDB)
 
-## Assignment Overview
+A full-stack real-time chat application built with Socket.io for realtime messaging, React on the client, an Express server, and MongoDB for persistence. The project demonstrates channels (rooms), private messages (whispers), user presence, typing indicators, message persistence, and JWT-based authentication.
 
-You will build a chat application with the following features:
-1. Real-time messaging using Socket.io
-2. User authentication and presence
-3. Multiple chat rooms or private messaging
-4. Real-time notifications
-5. Advanced features like typing indicators and read receipts
+---
 
-## Project Structure
+## Project overview
+
+- Real-time messaging with Socket.io (rooms for channels + private messages)
+- Persistent message storage in MongoDB (public and private messages)
+- JWT-based authentication for sockets and REST API
+- React client that connects to Socket.io and renders channels, users, and conversations
+- REST API endpoints for fetching message history and user lists
+
+This repository is structured as a two-app workspace:
 
 ```
-socketio-chat/
-├── client/                 # React front-end
-│   ├── public/             # Static files
-│   ├── src/                # React source code
-│   │   ├── components/     # UI components
-│   │   ├── context/        # React context providers
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── pages/          # Page components
-│   │   ├── socket/         # Socket.io client setup
-│   │   └── App.jsx         # Main application component
-│   └── package.json        # Client dependencies
-├── server/                 # Node.js back-end
-│   ├── config/             # Configuration files
-│   ├── controllers/        # Socket event handlers
-│   ├── models/             # Data models
-│   ├── socket/             # Socket.io server setup
-│   ├── utils/              # Utility functions
-│   ├── server.js           # Main server file
-│   └── package.json        # Server dependencies
-└── README.md               # Project documentation
+/
+├─ client/      # React app (UI, socket client)
+├─ server/      # Express + Socket.io server, MongoDB models
+├─ Week5-Assignment.md
+└─ README.md
 ```
 
-## Getting Started
+---
 
-1. Accept the GitHub Classroom assignment invitation
-2. Clone your personal repository that was created by GitHub Classroom
-3. Follow the setup instructions in the `Week5-Assignment.md` file
-4. Complete the tasks outlined in the assignment
+## Implemented features
 
-## Files Included
+- User authentication (JWT) and socket authentication middleware
+- Global channel `general` and multi-channel support (join/leave channels)
+- Public messages scoped to channels
+- Private one-to-one messages (persisted to DB and emitted to both parties)
+- Message persistence (MongoDB) with REST endpoint to fetch history
+- Typing indicators and online user list (presence)
+- Reconnection and basic socket auth error handling
+- REST API endpoints:
+  - `GET /api/messages` — fetch messages (supports `channel=` query or `private=true`)
+  - `GET /api/users` — fetch all users with online status
 
-- `Week5-Assignment.md`: Detailed assignment instructions
-- Starter code for both client and server:
-  - Basic project structure
-  - Socket.io configuration templates
-  - Sample components for the chat interface
+S
+## Architecture & data flow (high level)
 
-## Requirements
+- Client connects to server via Socket.io and authenticates using a JWT passed in socket auth.
+- Server validates JWT in socket middleware and attaches the user to `socket.user`.
+- Public messages are saved to MongoDB with a `channel` field and broadcast into the Socket.io room for that channel.
+- Private messages have `isPrivate: true` and a `recipient` reference; they're saved and emitted only to the recipient's socket and the sender.
+- The REST API provides message history for channels or private conversations and returns messages with sender/recipient DB ids so the client can group conversations.
 
-- Node.js (v18 or higher)
+---
+
+## Getting started (development)
+
+Prerequisites
+
+- Node.js 18+ (or modern LTS)
 - npm or yarn
-- Modern web browser
-- Basic understanding of React and Express
+- A running MongoDB instance (local or cloud)
 
-## Submission
+Environment variables (create `server/config/.env`)
 
-Your work will be automatically submitted when you push to your GitHub Classroom repository. Make sure to:
+```
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/chatdb
+JWT_SECRET=your_jwt_secret_here
+CLIENT_URL=http://localhost:5173  # optional, used for CORS
+```
 
-1. Complete both the client and server portions of the application
-2. Implement the core chat functionality
-3. Add at least 3 advanced features
-4. Document your setup process and features in the README.md
-5. Include screenshots or GIFs of your working application
-6. Optional: Deploy your application and add the URLs to your README.md
+Install dependencies and run
 
-## Resources
+Server
 
-- [Socket.io Documentation](https://socket.io/docs/v4/)
-- [React Documentation](https://react.dev/)
-- [Express.js Documentation](https://expressjs.com/)
-- [Building a Chat Application with Socket.io](https://socket.io/get-started/chat) 
+```powershell
+cd server
+npm install
+# development: starts the server (watch or normal depending on package.json)
+npm run dev
+```
+
+Client
+
+```powershell
+cd client
+npm install
+npm run dev
+```
+
+Open the client app in your browser (Vite typically serves at http://localhost:5173). The server runs by default on port 5000.
+
+---
+
+## API & Socket reference
+
+REST
+
+- GET /api/messages
+  - Query parameters:
+    - `channel` (string) — return public messages for the channel
+    - `private=true` — return private messages involving the authenticated user (requires Bearer token)
+  - Behavior:
+    - If `channel` is provided: returns only public messages for that channel
+    - If `private=true` and user is authenticated: returns private messages where user is sender or recipient
+    - Authenticated without channel: returns public + private involving user
+    - Unauthenticated: returns public messages only
+
+- GET /api/users
+  - Returns all registered users with fields: `{ id: socketId|null, dbId, username, online }`
+
+Socket events (client ↔ server)
+
+- Client -> Server
+  - `send_message` — { message: string, channel?: string } or a raw string
+  - `private_message` — { to: <socketId>, message: string }
+  - `join_channel` — channel name string
+  - `leave_channel` — channel name string
+  - `typing` — boolean
+
+- Server -> Client
+  - `receive_message` — public message payload emitted to a channel
+  - `private_message` — private message payload sent to sender and recipient
+  - `user_list` — array of online users
+  - `user_joined` / `user_left` — notify about joins/leaves
+  - `typing_users` — list of usernames currently typing
+  - `me` — { dbId } sent to the client on connect so it knows its DB id
+
+Message payload shape (example)
+
+```
+{
+  id: "<messageId>",
+  message: "Hello",
+  sender: "alice",
+  senderDbId: "<user-db-id>",
+  senderId: "<socket-id>|null",
+  recipientDbId: "<db-id>|null",
+  channel: "general",
+  timestamp: "2025-11-05T...",
+  isPrivate: false
+}
+```
+
+---
+
+
+## Troubleshooting
+
+- MongoDB connection errors:
+  - Ensure `MONGO_URI` is correct and MongoDB is reachable. Check server logs (`✅ MongoDB connected` on success).
+- Socket authentication errors:
+  - Ensure the client sends a valid JWT in socket auth (and as `Authorization: Bearer <token>` for REST calls).
+- Private messages not delivered:
+  - Private messages are delivered by socket id — confirm the recipient is online and the server maps their DB id to a socket id in `user_list`.
+- Messages not showing after refresh:
+  - Verify the client calls `GET /api/messages` with proper query params and that the server returns messages with `senderDbId`/`recipientDbId`. Check server logs for errors.
+
+

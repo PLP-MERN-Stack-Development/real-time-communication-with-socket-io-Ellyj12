@@ -1,21 +1,14 @@
 import { useState } from 'react';
 import { registerUser, loginUser } from '../utilities/API';
 
-/**
- * This component replaces JoinChat.jsx.
- * It provides a form for both registration and login.
- *
- * It receives:
- * - setAppUsername: A function to set the username in the parent App.jsx.
- * - connect: The connect function from the useSocket hook.
- */
+
 function AuthPage({ setAppUsername, connect }) {
-  // State for the form
+
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // State for handling API responses
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -32,28 +25,25 @@ function AuthPage({ setAppUsername, connect }) {
     try {
       let data;
       if (isLoginMode) {
-        // --- Try to Login ---
+      
         data = await loginUser(username, password);
       } else {
-        // --- Try to Register ---
+       
         data = await registerUser(username, password);
       }
 
-      // --- If successful ---
-      // 1. Store the token and username in localStorage
+      
       localStorage.setItem('chat-token', data.token);
       localStorage.setItem('chat-username', data.username);
 
-      // 2. Set the username in the main App component
+   
       setAppUsername(data.username);
 
-      // 3. Connect to the socket server
-      // (We will modify the connect() function in the next step
-      // to automatically read the token from localStorage)
+  
       connect();
 
     } catch (err) {
-      // If API throws an error, display it
+     
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -62,7 +52,7 @@ function AuthPage({ setAppUsername, connect }) {
 
   const toggleMode = () => {
     setIsLoginMode((prevMode) => !prevMode);
-    setError(null); // Clear errors when toggling
+    setError(null); 
   };
 
   return (
@@ -73,7 +63,7 @@ function AuthPage({ setAppUsername, connect }) {
         </h2>
         
         <form onSubmit={handleSubmit}>
-          {/* Error Message Display */}
+          
           {error && (
             <div className="bg-red-800 border border-red-700 text-white px-4 py-2 rounded-md mb-4 text-center">
               {error}

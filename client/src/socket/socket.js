@@ -52,19 +52,18 @@ export const useSocket = () => {
       }
       setPrivateMessages(privateByPeer);
 
-      // load channel history for the current channel
+   
       const res = await fetch(`http://localhost:5000/api/messages?channel=${encodeURIComponent(currentChannel)}`, { headers });
       const history = await res.json();
 
-      // ✅ Load DB messages first
+     
       setMessages(history);
 
-      // Load full user list (with online/offline status)
       try {
         const usersRes = await fetch("http://localhost:5000/api/users", { headers });
         const usersList = await usersRes.json();
         setUsers(usersList);
-        // determine my DB id from the users list when available
+      
         const me = usersList.find((u) => u.id === socket.id);
         setMyDbId(me ? me.dbId : null);
       } catch (uErr) {
@@ -86,25 +85,24 @@ export const useSocket = () => {
   };
 
   const sendMessage = (message) => {
-    // Include the current channel when sending a public message
+ 
     socket.emit('send_message', { message, channel: currentChannel });
   };
 
   const joinChannel = async (channel) => {
     if (!channel || channel === currentChannel) return;
-    // ask the server to leave the current channel (if any)
+  
     if (currentChannel) {
       socket.emit('leave_channel', currentChannel);
     }
 
-    // ask the server to join the socket.io room and wait for confirmation
     return new Promise((resolve) => {
       const onJoined = (joinedChannel) => {
         if (joinedChannel !== channel) return;
         socket.off('channel_joined', onJoined);
         setCurrentChannel(channel);
 
-        // fetch channel-specific history after confirming join
+       
         (async () => {
           try {
             const token = localStorage.getItem('chat-token');
@@ -169,10 +167,9 @@ export const useSocket = () => {
     const onReceiveMessage = (message) => {
       setLastMessage(message);
 
-      // Ignore private messages here; private messages are delivered on 'private_message'
       if (message.isPrivate) return;
 
-      // If message has a channel, only add it when it matches currentChannel
+   
       if (message.channel && message.channel !== currentChannel) return;
 
       setMessages((prev) => [...prev, message]);
@@ -181,14 +178,12 @@ export const useSocket = () => {
     const onPrivateMessage = (message) => {
       setLastMessage(message);
 
-      // message includes senderDbId and recipientDbId (server now provides these)
-      // Determine the peer DB id (the other participant in the PM)
       let peerDbId = null;
 
       if (myDbId) {
         peerDbId = message.senderDbId === myDbId ? message.recipientDbId : message.senderDbId;
       } else {
-        // Fallback: compare sender socket id when DB id hasn't been determined yet
+      
         peerDbId = message.senderId === socket.id ? message.recipientDbId : message.senderDbId;
       }
 
@@ -200,7 +195,7 @@ export const useSocket = () => {
 
         copy[peerDbId] = {
           messages: [...copy[peerDbId].messages, message],
-          // only increment unread for incoming messages (not for the sender's own echoes)
+         
           unread: wasUnread + (isIncoming ? 1 : 0),
         };
         return copy;
@@ -208,8 +203,7 @@ export const useSocket = () => {
     };
 
     const onUserList = (userList) => {
-      // When the server sends the online user list, refresh the full
-      // users list (so offline users are included and statuses reflect current state).
+     
       (async () => {
         try {
           const res = await fetch('http://localhost:5000/api/users');
@@ -219,7 +213,7 @@ export const useSocket = () => {
           setMyDbId(me ? me.dbId : null);
         } catch (err) {
           console.error('Failed to refresh users:', err);
-          // Fallback: use the online-only list
+          
           setUsers(userList);
         }
       })();
